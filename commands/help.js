@@ -1,6 +1,6 @@
 module.exports = {
     name: 'help',
-    description: 'Instructions',
+    description: 'Commands',
     aliases: ['commands'],
     execute(message) {
         message.channel.send('Testing')
