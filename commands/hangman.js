@@ -1,6 +1,8 @@
 const Discord = require('discord.js')
 const fs = require('fs')
 const { primary } = require('../config.json')
+
+// modify this with a better reg expression instead of map
 const words = fs.readFileSync('./assets/words.txt').toString().split('\n').map(word => word.slice(0, word.length - 1))
 
 const WINNER = 'WINNER'
@@ -62,7 +64,7 @@ module.exports = {
                 }, {})
                 const lettersArray = Object.values(filteredMessages)
                 const randomLetter = lettersArray[Math.floor(Math.random() * lettersArray.length)]
-                return randomLetter || NO_INPUT
+                return typeof randomLetter === 'string' ? randomLetter.toLowerCase() : NO_INPUT
             }
             // private
             getDisplay() {
@@ -125,13 +127,14 @@ module.exports = {
                 return hangmanEmbed
             }
         }
+        message.channel.send('Debugging right now, be sure to blame Mac if the bot randomly stops working')
         randomWord = words[Math.floor(Math.random() * words.length)]
         const hangman = new Hangman(randomWord)
         console.log(randomWord)
         for (let i = 0; i < hangman.availableLetters.length - hangman.lives - 1; i++) {
             await hangman.play()
             if (hangman.status === PLAYING) {
-                false
+                continue
             }
             else {
                 switch(hangman.status) { 
