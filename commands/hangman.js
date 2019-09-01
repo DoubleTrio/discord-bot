@@ -7,12 +7,12 @@ const WINNER = 'WINNER'
 const OUT_OF_LIVES = 'OUT_OF_LIVES'
 const NO_INPUT = 'NO_INPUT'
 const PLAYING = 'PLAYING'
+const GUESSED = 'GUESSED'
 
 module.exports = {
     name: 'hangman',
     description: 'Play an epic hangman game',
     async execute(client, message, args) {
-        message.channel.send('Testing')
         class Hangman {
             constructor(secretWord) {
                 this.lives = 8
@@ -23,6 +23,7 @@ module.exports = {
                 this.isFirstNullInput = false
                 this.prevNullInput = false
                 this.gameStarted = false
+                this.wordGuessed = false
             }
 
             async play() {
@@ -36,9 +37,9 @@ module.exports = {
 
             // private
             async awaitLetterInput() {
-                const filter = m => this.availableLetters.includes(m.content.toLowerCase())
+                const filter = m => this.availableLetters.includes(m.content.toLowerCase()) || m.content.startsWith(this.secretWord)
                 const allMessages = await message.channel.awaitMessages(filter, {
-                    time: 3000,
+                    time: 8000,
                 })
                 const transformedMessages = allMessages.map(m => (
                     {
@@ -46,6 +47,10 @@ module.exports = {
                         id: m.author.id,
                     }
                 )).reverse()
+                
+                if (transformedMessages.map(m => m.content).includes(this.secretWord)) {
+                    return GUESSED
+                }
 
                 const filteredMessages = transformedMessages.reduce((unique, m) => {
                     return Object.keys(unique).includes(m.id) 
@@ -57,7 +62,7 @@ module.exports = {
                 }, {})
                 const lettersArray = Object.values(filteredMessages)
                 const randomLetter = lettersArray[Math.floor(Math.random() * lettersArray.length)]
-                return randomLetter || 'No Letter'
+                return randomLetter || NO_INPUT
             }
             // private
             getDisplay() {
@@ -79,6 +84,9 @@ module.exports = {
                 else if (this.isFirstNullInput === true && this.prevNullInput === true) {
                     this.status = NO_INPUT
                 }
+                else if (this.wordGuessed === true) {
+                    this.status = GUESSED
+                }
                 else if ([...this.secretWord].filter(letter => this.lettersGuessed.includes(letter) || letter === ' ').length === this.secretWord.length) {
                     this.status = WINNER
                 }
@@ -88,14 +96,19 @@ module.exports = {
             }
 
             manageLetterInput(letter) {
-                if (letter === 'No Letter') {
+                if (letter === NO_INPUT) {
                     if (!this.isFirstNullInput) {
                         message.channel.send('There was no input detected. If there\'s no input in 8 seconds, the game will end!')
                         this.isFirstNullInput = true
                     }
                 }
+
+                else if (letter === GUESSED) {
+                    this.wordGuessed = true
+                }
+
                 else {
-                    this.availableLetters.pop(letter)
+                    this.availableLetters = this.availableLetters.filter(l => l !== letter)
                     this.lettersGuessed.push(letter)
                     this.isFirstNullInput = false
                     if (![...this.secretWord].includes(letter)) this.lives--
@@ -123,10 +136,13 @@ module.exports = {
             else {
                 switch(hangman.status) { 
                     case WINNER:
-                        message.channel.send(`You won! The word was \`${hangman.secretWord}\``)
+                        message.channel.send(`You won! The word was \`${hangman.secretWord}\`.`)
+                        break
+                    case GUESSED:
+                        message.channel.send(`Nice job guessing! The word was \`${hangman.secretWord}\`.`)
                         break
                     case OUT_OF_LIVES: 
-                        message.channel.send(`Game over, you have no more lives! The word was \`${hangman.secretWord}\``)
+                        message.channel.send(`Game over, you have no more lives! The word was \`${hangman.secretWord}\`.`)
                         break
                     case NO_INPUT:
                         message.channel.send('Nobody was playing for two turns. The game has ended!')
