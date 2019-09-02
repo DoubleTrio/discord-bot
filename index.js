@@ -67,7 +67,7 @@ client.on('message', message => {
 		command.execute(client, message, args);
 	} catch (error) {
 		console.error(error);
-		message.reply('there was an error trying to execute that command!');
+		message.reply('Maq is stinky coding for letting his code break. Hats off to you for breaking it');
 	}
 });
 

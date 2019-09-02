@@ -1,5 +1,10 @@
 module.exports = [
     {
+        interfaceId: 0, 
+        dbId: 0, 
+        name: "Random"
+    },
+    {
         interfaceId: 1, 
         dbId: 9, 
         name: "General Knowledge"
