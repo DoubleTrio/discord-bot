@@ -165,7 +165,7 @@ module.exports = {
                 const hangmanEmbed = new Discord.RichEmbed()
                     .addField(`# Lives Left: ${this.lives}`, '** **')
                     .addField(`Available Letters: ${this.availableLetters.join(' ')}`, '** **')
-                    .addField(`Unavailable Letters: ${this.lettersGuessed.sort().join(' ')}`, '** **')
+                    .addField(`Letters Guessed: ${this.lettersGuessed.sort().join(' ')}`, '** **')
                     .addField(this.getDisplay(), '** **')
                     .setColor(primary)
                 return hangmanEmbed
@@ -185,6 +185,7 @@ module.exports = {
             if (hangman.status === PLAYING) {
                 continue
             }
+
             else {
                 switch(hangman.status) { 
                     case WINNER:
