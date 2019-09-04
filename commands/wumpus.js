@@ -3,18 +3,37 @@ const Discord = require('discord.js')
 const { primary } = require('../config.json')
 const rules = require('../assets/wumpus/rules')
 var fp = require('lodash/fp')
- 
+
+const color = parseInt(primary.slice(1), 16)
 // Load method categories.
 var array = require('lodash/array')
 var object = require('lodash/fp/object')
 
+const shuffleArray = arr => arr
+    .map(a => [Math.random(), a])
+    .sort((a, b) => a[0] - b[0])
+    .map(a => a[1])
+
+const BAT = 'BAT'
+const PIT = 'PIT'
+const WUMPUS = 'WUMPUS'
+const PLAYER = 'PLAYER'
+
 module.exports = {
     name: 'wumpus',
     description: 'Play Hunt the Wumpus!',
-    async execute(client, message) {
+    async execute(client, message, args) {
+        if (args[0] === 'help' || args[0] === 'rules') {
+            const embed = new Discord.RichEmbed(rules)
+            message.author.send(embed)
+            message.channel.send('DM on wumpus has been sent!')
+            return false
+        }
         class Wumpus {
             constructor(object) {
                 this.arrows = 5
+                this.elements = [PLAYER, BAT, BAT, PIT, PIT, WUMPUS]
+                this.occupiedCaves = []
                 this.cave = {
                     1: [2, 3, 4], 2: [1, 5, 6], 3: [1, 7, 8], 4: [1, 9, 10], 
                     5:[2, 9, 11], 6: [2, 7, 12], 7: [3, 6, 13], 8: [3, 10, 14], 
@@ -24,21 +43,69 @@ module.exports = {
                 }
                 this.arrowDistance = 1
                 this.threats = {}
-                this.position = -1
+                this.position = null
             }
 
             async play() {
-                const rulesEmbed = this.getWumpusRules()
-                message.channel.send(rulesEmbed)
+                this.populateCave()
+                this.getWumpusEmbed()
+                this.senseDanger()
             }
 
+
             getWumpusRules() {
-                const wumpusEmbed = new Discord.RichEmbed(rules)
-                return wumpusEmbed
+                const wumpusRulesEmbed = new Discord.RichEmbed(rules)
+                return wumpusRulesEmbed
+            }
+
+            populateCave() {
+                const orderedCave = Object.keys(this.cave)
+                const shuffledCave = shuffleArray(orderedCave)
+                console.log(shuffledCave)
+                this.elements.forEach((element, index) => {
+                    const cave = shuffledCave[index]
+                    this.occupiedCaves = [
+                        ...this.occupiedCaves, 
+                            {
+                                cave: cave,
+                                element: element,
+                                exits: this.cave[cave]
+                            }
+                    ]
+                })
+                this.position = this.occupiedCaves.find(cave => cave.element === 'PLAYER')
+                console.log(this.occupiedCaves)
             }
 
             getWumpusEmbed() {
-
+                const { cave, exits } = this.position
+                let threats = this.senseDanger()
+                console.log(threats)
+                threats = Object.values(threats).join('\n')
+                console.log(threats)
+                const data = {
+                    color: color,
+                    fields: [
+                        {
+                            name: 'Instructions:',
+                            value: 'Type `.shoot <caveNumber>` to attempt to shoot an arrow or `.move <caveNumber>` to continue through the cave.',
+                        },
+                        {
+                            name: '** **',
+                            value: '** **',
+                        },
+                        {
+                            name: `Current Cave: ${cave} | Rooms Visited: [] | Arrows: ${this.arrows}`,
+                            value: `Leads to ${exits.join(', ')}`,
+                        },
+                        {
+                            name: 'Threats:',
+                            value: threats.length ? threats : 'None, continue through the cave...',
+                        },
+                    ]
+                }
+                const wumpusEmbed = new Discord.RichEmbed(data)
+                message.channel.send(wumpusEmbed)
             }
 
             getStatus() {
@@ -51,7 +118,20 @@ module.exports = {
             }
 
             senseDanger() {
-
+                const nonPlayerCaves = this.occupiedCaves.filter(cave => cave.element !== 'PLAYER') 
+                const messages = nonPlayerCaves.reduce((unique, cave) => {
+                    return !this.position.exits.includes(parseInt(cave.cave)) 
+                    ? unique 
+                    : {
+                        ...unique,
+                        [cave.element.toLowerCase()]: cave.element === BAT 
+                            ? 'You hear a rustling.' 
+                            : cave.element === PIT 
+                            ? 'You feel a cold wind blowing from a nearby cavern.'
+                            : 'You smell something terrible nearby.'
+                    }
+                }, {})
+                return messages
             }
 
             move() {
@@ -59,7 +139,6 @@ module.exports = {
             }
 
             shootArrow() {
-                ``
             }
         }
 

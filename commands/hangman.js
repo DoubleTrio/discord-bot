@@ -3,7 +3,8 @@ const fs = require('fs')
 const { primary } = require('../config.json')
 
 // modify this with a better reg expression instead of map
-const words = fs.readFileSync('./assets/words.txt').toString().split('\n').map(word => word.slice(0, word.length - 1))
+const words = fs.readFileSync('./assets/hangman/words.txt').toString().split('\n').map(word => word.slice(0, word.length - 1))
+const clash = fs.readFileSync('./assets/hangman/clash.txt').toString().split('\n').map(word => word.slice(0, word.length - 1))
 
 // Constants for the game state of Hangman
 const WINNER = 'WINNER'
@@ -50,7 +51,7 @@ module.exports = {
 
                 // Allow the players to guess the word as well as letter guesses
                 // If any players enter a repeated letter, their input will be ignored to prevent the game from being abused to continue forever
-                const filter = m => this.availableLetters.includes(m.content.toLowerCase()) || m.content.startsWith(this.secretWord)
+                const filter = m => this.availableLetters.includes(m.content.toLowerCase()) || m.content.toLowerCase().startsWith(this.secretWord)
 
                 // Wait 8 seconds for an input
                 const allMessages = await message.channel.awaitMessages(filter, {
@@ -69,7 +70,7 @@ module.exports = {
 
                 // End the method call if any of the players guess the word and return the state
                 // This can be modified to prevent players from inputting multiple guesses AND inputting a letter
-                if (transformedMessages.map(m => m.content).includes(this.secretWord)) return GUESSED
+                if (transformedMessages.map(m => m.content.toLowerCase()).includes(this.secretWord)) return GUESSED
 
                 // End the method call if there's no input
                 if (!transformedMessages.length) return NO_INPUT
@@ -147,6 +148,7 @@ module.exports = {
 
                 else if (letter === GUESSED) {
                     this.wordGuessed = true
+                    this.isFirstNullInput = false
                 }
 
                 // Otherwise, remove the letter from the available letters and them to the letters guessed
@@ -173,14 +175,13 @@ module.exports = {
         }
         
         // Choose a random word and start the game
-        randomWord = words[Math.floor(Math.random() * words.length)]
+        randomWord = args[0] === 'clash' ? clash[Math.floor(Math.random() * clash.length)] : words[Math.floor(Math.random() * words.length)]
         const hangman = new Hangman(randomWord)
         console.log(randomWord)
 
         // Play the game for the maximum mount of turns possible
-        for (let i = 0; i < hangman.availableLetters.length - hangman.lives - 1; i++) {
+        for (let i = 0; i < 23; i++) {
             await hangman.play()
-
             // Determining whether to end the game based on the status
             if (hangman.status === PLAYING) {
                 continue
