@@ -9,6 +9,7 @@ const helpEmbed = new Discord.RichEmbed()
     .addField('.wumpus', '(WIP) - Play the classic game of Hunt the Wumpus!')   
     .addField('---------------------------------------------', '** **')
     .setFooter('Made by a French dessert')
+
 module.exports = {
     name: 'help',
     description: 'Commands',

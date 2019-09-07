@@ -1,23 +1,45 @@
+/* 
+TODO:
+- Implement the shootArrow() method
+- Encounter threats while moving to other parts of the cave
+- Handle bad input
+- State management of the game
+- Clean up and refactor code, perhaps by turning each elements in the game into a class
+
+Extras:
+- Add edges if possible
+- Implement the map of the cave system
+*/
+
 const _ = require('lodash')
 const Discord = require('discord.js')
 const { primary } = require('../config.json')
 const rules = require('../assets/wumpus/rules')
-var fp = require('lodash/fp')
+
+const map = new Discord.Attachment('../assets/wumpus/map/map.png')
 
 const color = parseInt(primary.slice(1), 16)
-// Load method categories.
-var array = require('lodash/array')
-var object = require('lodash/fp/object')
 
 const shuffleArray = arr => arr
     .map(a => [Math.random(), a])
     .sort((a, b) => a[0] - b[0])
     .map(a => a[1])
 
+// Elements in the game
 const BAT = 'BAT'
 const PIT = 'PIT'
 const WUMPUS = 'WUMPUS'
 const PLAYER = 'PLAYER'
+
+// Handling user inputs
+const OUT_OF_TIME = 'OUT_OF_TIME'
+const NONEXISTENT = 'NONEXISTENT'
+const VALID = 'VALID'
+
+// Game states
+const KILLED_BY_WUMPUS = 'KILLED_BY_WUMPUS'
+const PIT_DEATH = 'PIT_DEATH'
+const WIN = 'WIN'
 
 module.exports = {
     name: 'wumpus',
@@ -31,8 +53,9 @@ module.exports = {
         }
         class Wumpus {
             constructor(object) {
+                this.gameStarted = false
                 this.arrows = 5
-                this.elements = [PLAYER, BAT, BAT, PIT, PIT, WUMPUS]
+                this.elements = [PLAYER, BAT, BAT, BAT, BAT, BAT, PIT, PIT, PIT, WUMPUS, WUMPUS, WUMPUS, WUMPUS]
                 this.occupiedCaves = []
                 this.cave = {
                     1: [2, 3, 4], 2: [1, 5, 6], 3: [1, 7, 8], 4: [1, 9, 10], 
@@ -41,15 +64,43 @@ module.exports = {
                     13: [7, 14, 18], 14: [8, 13, 19], 15: [9, 16, 17], 16: [10, 15, 19], 
                     17: [11, 20, 15], 18: [12, 13, 20], 19: [14, 16, 20], 20: [17, 18, 19]
                 }
-                this.arrowDistance = 1
-                this.threats = {}
+                this.roomsVisited = []
+                this.wumpusIsAwake = false
+                this.threats = []
                 this.position = null
+                this.warningMessages = {
+                    BAT: 'You hear a rustling.',
+                    PIT: 'You feel a cold wind blowing from a nearby cavern.',
+                    WUMPUS: 'You smell something terrible nearby.',
+                }
             }
 
             async play() {
-                this.populateCave()
-                this.getWumpusEmbed()
+                if (!this.gameStarted) {
+                    this.populateCave()
+                    this.gameStarted = true
+                }
                 this.senseDanger()
+                this.getWumpusEmbed()
+                console.log(this.threats)
+                let input = await this.awaitInput()
+                const inputState = this.validateInput(input)
+                console.log(this.position)
+                // Manage bad input later...
+                if (inputState === OUT_OF_TIME) {
+                    message.channel.send('30 seconds have passed! Hunt the Wumpus will now end.')
+                    return false
+                }
+                else if (inputState === NONEXISTENT) {
+                    message.channel.send('The cave does not exist! Please try again.')
+                    return false
+                }
+
+                input.command === '.move' 
+                ? this.move(input.cave)
+                : this.shootArrow(input.cave) 
+
+                console.log(this.position)
             }
 
 
@@ -61,46 +112,35 @@ module.exports = {
             populateCave() {
                 const orderedCave = Object.keys(this.cave)
                 const shuffledCave = shuffleArray(orderedCave)
-                console.log(shuffledCave)
                 this.elements.forEach((element, index) => {
                     const cave = shuffledCave[index]
                     this.occupiedCaves = [
                         ...this.occupiedCaves, 
                             {
-                                cave: cave,
+                                cave: parseInt(cave),
                                 element: element,
                                 exits: this.cave[cave]
                             }
                     ]
                 })
-                this.position = this.occupiedCaves.find(cave => cave.element === 'PLAYER')
-                console.log(this.occupiedCaves)
+                this.position = this.occupiedCaves.find(cave => cave.element === PLAYER)
+                this.roomsVisited.push(this.position.cave)
+                this.occupiedCaves = this.occupiedCaves.filter(cave => cave.element !== PLAYER)
             }
 
             getWumpusEmbed() {
                 const { cave, exits } = this.position
-                let threats = this.senseDanger()
-                console.log(threats)
-                threats = Object.values(threats).join('\n')
-                console.log(threats)
+                const threatMessages = this.threats.map(t => t.message).join('\n')
                 const data = {
                     color: color,
-                    fields: [
+                    fields: [         
                         {
-                            name: 'Instructions:',
-                            value: 'Type `.shoot <caveNumber>` to attempt to shoot an arrow or `.move <caveNumber>` to continue through the cave.',
-                        },
-                        {
-                            name: '** **',
-                            value: '** **',
-                        },
-                        {
-                            name: `Current Cave: ${cave} | Rooms Visited: [] | Arrows: ${this.arrows}`,
+                            name: `Current Cave: ${cave} | Rooms Visited: ${this.roomsVisited.join(', ')} | Arrows: ${this.arrows}`,
                             value: `Leads to ${exits.join(', ')}`,
                         },
                         {
                             name: 'Threats:',
-                            value: threats.length ? threats : 'None, continue through the cave...',
+                            value: threatMessages.length ? threatMessages : 'None, continue through the cave...',
                         },
                     ]
                 }
@@ -114,28 +154,65 @@ module.exports = {
 
             async awaitInput() {
                 // give the user a max of 20 seconds to decide their action
+                // can probably use regex here to shorten code
+                const filter = m => m.author.id === message.author.id && (m.content.startsWith('.shoot') || m.content.startsWith('.move'))
+                try {
+                    const m = await message.channel.awaitMessages(filter, 
+                        {
+                            time: 10000,
+                            max: 1,
+                            errors: ['time'],
+                        }
+                    )
+                    
+                    const transformedMessage = m.map(input => {
+                        const argument = input.content.split(/ +/)
+                        return {
+                            command: argument[0],
+                            cave: parseInt(argument[1]),
+                        }
+                    })
+                    return transformedMessage[0]
+                }
 
+                catch (error) {
+                    return OUT_OF_TIME
+                }
+                
+
+            }
+
+            validateInput(input) {
+                const inputState = input === OUT_OF_TIME 
+                    ? OUT_OF_TIME 
+                    : this.position.exits.includes(input.cave) 
+                        ? VALID 
+                        : NONEXISTENT
+                return inputState
             }
 
             senseDanger() {
-                const nonPlayerCaves = this.occupiedCaves.filter(cave => cave.element !== 'PLAYER') 
-                const messages = nonPlayerCaves.reduce((unique, cave) => {
-                    return !this.position.exits.includes(parseInt(cave.cave)) 
-                    ? unique 
-                    : {
-                        ...unique,
-                        [cave.element.toLowerCase()]: cave.element === BAT 
-                            ? 'You hear a rustling.' 
-                            : cave.element === PIT 
-                            ? 'You feel a cold wind blowing from a nearby cavern.'
-                            : 'You smell something terrible nearby.'
-                    }
-                }, {})
-                return messages
+                const allThreats = this.occupiedCaves.filter(cave => this.position.exits.includes(parseInt(cave.cave)) && cave.element !== PLAYER)
+                console.log(allThreats)
+                this.threats = allThreats.reduce((group, c) => {
+                    const name = c.element
+                    const combineCaveThreats = group.find(e => e.element === c.element) || { threat: [] }
+                    const filteredGroup = group.filter(e => e.element !== c.element)
+                    return [
+                        ...filteredGroup,
+                        {
+                            element: name,
+                            threat: [...combineCaveThreats.threat, c.cave],
+                            message: this.warningMessages[name]
+                        
+                        }
+                    ]
+                }, [])
             }
 
-            move() {
-
+            move(cave) {
+                this.position = { cave: cave, exits: this.cave[cave] }
+                if (!this.roomsVisited.includes(cave)) this.roomsVisited.push(cave)
             }
 
             shootArrow() {
@@ -143,6 +220,8 @@ module.exports = {
         }
 
         const wumpus = new Wumpus()
-        await wumpus.play()
+        for (let i = 0; i < 3; i++) {
+            await wumpus.play()
+        }
     }
 }
