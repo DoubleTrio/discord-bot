@@ -14,7 +14,7 @@ module.exports = {
         },
         {                    
             name: '**Wumpus:**',
-            value: '-The wumpus can traverse to any parts of the cave without the worry of being inflicted with hazards. However, he is usually asleep. \n -You can wake him up by shooting an arrow or moving into his room. \n -When the wumpus is awake, he can stay still or move to other parts of the vave. \n -After that, if he is where you are, you will be eaten and lose in the worst possible death',
+            value: '-The wumpus can traverse to any parts of the cave without the worry of being inflicted with hazards. However, he is usually asleep. \n -You can wake him up by shooting an arrow or moving into his room. \n -When the wumpus is awake, he has a 75% chance to move to an adjacent cave and a 25% to remain still. \n -This means you will not be able to detect the wumpus as you both choose the same room. -After that, if he is where you are, you will be eaten and lose in a horrible death.',
         },
         {
             name: '**You:**',
@@ -22,7 +22,7 @@ module.exports = {
         },
         {
             name: '**Commands:**',
-            value: '-.move <nearbyCave> to move to another part of a cave. \n-.shoot <nearbyCave> to attempt to shoot an arrow at the wumpus.',
+            value: '-`.move <nearbyCave>` to move to another part of a cave. \n-`.shoot <nearbyCave>` to attempt to shoot an arrow at the wumpus.',
         },
         {
             name: '**Warnings:**',

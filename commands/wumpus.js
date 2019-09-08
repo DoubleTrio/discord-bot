@@ -4,6 +4,11 @@ Extras:
 - Implement the map of the cave system
 */
 
+//  /**
+//   * @param userInfo Information about the user.
+//   * @param userInfo.name The name of the user.
+//   * @param userInfo.email The email of the user.
+//   */
 const Player = require('../models/wumpus/Player')
 const Wumpus = require('../models/wumpus/Wumpus')
 const Cave = require('../models/wumpus/Cave')
@@ -37,11 +42,13 @@ const gameStates = {
     PLAYING: 'PLAYING',
     WIN: 'WIN',
     NO_ARROWS: 'NO_ARROWS',
+    WUMPUS_MOVED: 'WUMPUS_MOVED'
 }
 
 module.exports = {
     name: 'wumpus',
     aliases: ['w', 'hunthewumpus'],
+    cooldown: 15,
     description: 'Play Hunt the Wumpus!',
     async execute(client, message, args) {
         if (args[0] === 'help' || args[0] === 'rules' || args[0] === 'instructions') {
@@ -62,29 +69,33 @@ module.exports = {
 
             async start() { 
                 this.player.senseThreats(this.cave.occupiedCaves)
+                console.log(this.cave.threats)
             }
 
             async gameLoop() {
+                console.log(this.cave.occupiedCaves)
                 this.getWumpusEmbed(this.player)
                 const input = await this.awaitInput()
                 if (input.command === '.move') {
                     this.player.move(input.cave)
                     if (this.player.triggeredElement === BAT) {
-                        message.channel.send('The mysterious bats transport you to another part of the cave...')
                         const batPositions = this.cave.occupiedCaves.filter(c => c.element === BAT).map(c => c.cave)
                         const possiblePositions = _.difference(Object.keys(this.cave.map).map(num => parseInt(num)), batPositions)
                         const randomPosition = possiblePositions[Math.floor(Math.random() * possiblePositions.length)]
                         this.player.move(randomPosition)
+                        message.channel.send(`The mysterious bats transport you to cave ${randomPosition}.`)
+                        this.getGameState()
                         this.player.senseThreats(this.cave.occupiedCaves)
                     }  
                 }
-                else {
+                else if (input.command === '.shoot') {
                     const isWumpusKilled = this.player.shootArrow(input.cave, this.wumpus.cave)
                     if (isWumpusKilled) {
                         this.wumpus.isDead = true
                     }
                     else {
-                        if (!this.wumpus.isAwake) message.channel.send('The wumpus has awoken from the cluttering of your arrow missing.')
+                        message.channel.send('Blasted! Your arrow has missed!')
+                        if (!this.wumpus.isAwake) message.channel.send('The Wumpus has awoken from the cluttering of your arrow missing.')
                         this.wumpus.isAwake = true   
                     }
                 }
@@ -107,6 +118,9 @@ module.exports = {
                 if (this.player.triggeredElement === PIT) {
                     this.status = gameStates.PIT_DEATH
                 }
+                else if (this.wumpus.willKillPlayer(this.player.cave)) {
+                    this.status = gameStates.WUMPUS_MOVED
+                }
                 else if (this.player.triggeredElement === WUMPUS) {
                     this.status = gameStates.KILLED_BY_WUMPUS
                 }
@@ -125,14 +139,18 @@ module.exports = {
                     color: color,
                     fields: [         
                         {
-                            name: `Current Cave: ${cave} | Rooms Visited: ${caveVisited.sort().join(', ')} | Arrows: ${arrows}`,
+                            name: `Current Cave: ${cave} | Rooms Visited: ${caveVisited.sort((a, b) => a - b).join(', ')} | Arrows: ${arrows}`,
                             value: `Leads to ${exits.join(', ')}`,
                         },
                         {
                             name: 'Threats:',
                             value: threatMessages.length ? threatMessages : 'None, continue through the cave...',
                         },
-                    ]
+                    ],
+                    file: 'assets/wumpus/map/map.png',
+                    thumbnail: {
+                        url: 'attachment://map.png'
+                    },
                 }
                 const wumpusEmbed = new Discord.RichEmbed(data)
                 message.channel.send(wumpusEmbed)
@@ -194,19 +212,22 @@ module.exports = {
             }
             else {
                 switch(huntTheWumpus.status) {
-                    case(gameStates.PIT_DEATH):
+                    case gameStates.PIT_DEATH:
                         message.channel.send('Woooosh. You have fallen into an endless pit to your horrible death.')
                         break
-                    case(gameStates.KILLED_BY_WUMPUS):
-                        message.channel.send('You unknowingly walk into the Wumpus\'s cave and become the feast for the Wumpus.')
+                    case gameStates.WUMPUS_MOVED:
+                        message.channel.send('The Wumpus walks into your cave and slaughters you.')
                         break
-                    case(gameStates.WIN):
-                        message.channel.send('You have slayed the Wumpus and won! The kingdom rewards you with a magical toaster!')
+                    case gameStates.KILLED_BY_WUMPUS:
+                        message.channel.send('You unknowingly walk into the Wumpus\'s cave and become its feast.')
                         break
-                    case(gameStates.OUT_OF_TIME):
+                    case gameStates.WIN:
+                        message.channel.send('You have slain the Wumpus and won! The kingdom rewards you with a magical toaster!')
+                        break
+                    case gameStates.OUT_OF_TIME:
                         message.channel.send('You wait too long until the Wumpus wakes up and discovers you in a defenseless position')
                         break
-                    case(gameStates.NO_ARROWS):
+                    case gameStates.NO_ARROWS:
                         message.channel.send('Hopelessness arise as you shoot your last arrow and miss. Suddenly, you become unmotivated and leave the cave with dishonor to your kingdom')
                         break
                     default:

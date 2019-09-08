@@ -12,4 +12,8 @@ module.exports = class Wumpus extends Entity {
             this.exits = this.map[this.cave]
         }  
     }
+
+    willKillPlayer(playerCave) {
+        return playerCave === this.cave ? true : false
+    }
 }

@@ -34,11 +34,11 @@ module.exports = class Player extends Entity {
     }
 
     addVisitedCave(cave) {
-        if (!this.caveVisited.includes(cave)) this.caveVisited.push(cave)
+        if (!this.caveVisited.includes(cave)) this.caveVisited.push(parseInt(cave))
     }
 
     senseThreats(occupiedCaves) {
-        const allThreats = occupiedCaves.filter(cave => this.exits.includes(parseInt(cave.cave)) && cave.element !== 'PLAYER')
+        const allThreats = occupiedCaves.filter(cave => this.exits.includes(parseInt(cave.cave)) && cave.element !== PLAYER)
         this.threats = allThreats.reduce((group, c) => {
             const name = c.element
             const combineCaveThreats = group.find(e => e.element === c.element) || { threat: [] }
@@ -56,7 +56,7 @@ module.exports = class Player extends Entity {
     }
 
     checkTriggeredThreats() {
-        const triggered = this.threats.find(t => t.threat.includes(this.cave) && t.element !== 'PLAYER') || false
+        const triggered = this.threats.find(t => t.threat.includes(this.cave) && t.element !== PLAYER) || false
         return triggered
     }
 }
