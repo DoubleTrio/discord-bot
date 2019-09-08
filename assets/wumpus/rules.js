@@ -21,6 +21,10 @@ module.exports = {
             value: '-You can move or shoot an arrow each turn. \n --Moving:  You can move one room each turn. \n --Arrows:  5 arrows total: waste them all and you are vulnerable to the wumpus and automatically lose. \n --You can only shoot to nearby rooms. \n If the arrow hits the wumpus, you win.',
         },
         {
+            name: '**Commands:**',
+            value: '-.move <nearbyCave> to move to another part of a cave. \n-.shoot <nearbyCave> to attempt to shoot an arrow at the wumpus.',
+        },
+        {
             name: '**Warnings:**',
             value: '-Wumpus: "You smell something terrible nearby." \n -Bat: "You hear a rustling." \n -Pit: "You feel a cold wind blowing from a nearby cavern."',
         },
