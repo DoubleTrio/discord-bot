@@ -16,7 +16,7 @@ const cooldowns = new Discord.Collection();
 
 client.once('ready', () => {
 	console.log('Ready!');
-	client.user.setActivity('Being a Toaster')
+	client.user.setActivity('Flying at the speed of light!')
 });
 
 client.on('message', message => {

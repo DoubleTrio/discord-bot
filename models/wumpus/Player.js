@@ -15,7 +15,7 @@ module.exports = class Player extends Entity {
         this.triggeredElement = false
     }
 
-    move(newCave) {
+    move(newCave, occupiedCaves) {
         this.triggeredElement = false
         this.cave = newCave
         const e = this.checkTriggeredThreats()
@@ -23,8 +23,13 @@ module.exports = class Player extends Entity {
             this.triggeredElement = e.element
         }
 
+        if (occupiedCaves) {
+            const pitPositions = occupiedCaves.filter(c => c.element === PIT).map(c => c.cave)
+            if (pitPositions.includes(this.cave)) this.triggeredElement = PIT
+        }
         this.addVisitedCave(newCave)
         this.exits = this.map[newCave]
+        
     }
 
     shootArrow(newCave, wumpusCave) {

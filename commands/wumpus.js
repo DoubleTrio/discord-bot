@@ -82,9 +82,9 @@ module.exports = {
                         const batPositions = this.cave.occupiedCaves.filter(c => c.element === BAT).map(c => c.cave)
                         const possiblePositions = _.difference(Object.keys(this.cave.map).map(num => parseInt(num)), batPositions)
                         const randomPosition = possiblePositions[Math.floor(Math.random() * possiblePositions.length)]
-                        this.player.move(randomPosition)
-                        message.channel.send(`The mysterious bats transport you to cave ${randomPosition}.`)
-                        this.getGameState()
+                        this.player.move(randomPosition, this.cave.occupiedCaves)
+                        message.channel.send(`🦇 | The mysterious bats transported you to cave ${randomPosition}.`)
+                        // this.getGameState()
                         this.player.senseThreats(this.cave.occupiedCaves)
                     }  
                 }
@@ -94,7 +94,7 @@ module.exports = {
                         this.wumpus.isDead = true
                     }
                     else {
-                        message.channel.send('Blasted! Your arrow has missed!')
+                        message.channel.send('➼ | Blasted! Your arrow has missed!')
                         if (!this.wumpus.isAwake) message.channel.send('The Wumpus has awoken from the cluttering of your arrow missing.')
                         this.wumpus.isAwake = true   
                     }
@@ -215,20 +215,20 @@ module.exports = {
                     case gameStates.PIT_DEATH:
                         message.channel.send('Woooosh. You have fallen into an endless pit to your horrible death.')
                         break
-                    case gameStates.WUMPUS_MOVED:
-                        message.channel.send('The Wumpus walks into your cave and slaughters you.')
-                        break
                     case gameStates.KILLED_BY_WUMPUS:
                         message.channel.send('You unknowingly walk into the Wumpus\'s cave and become its feast.')
                         break
+                    case gameStates.WUMPUS_MOVED:
+                        message.channel.send('The Wumpus walks into your cave and slaughters you.')
+                        break
                     case gameStates.WIN:
-                        message.channel.send('You have slain the Wumpus and won! The kingdom rewards you with a magical toaster!')
+                        message.channel.send('🎉 | You have slain the Wumpus and won! The kingdom rewards you with a magical toaster!')
                         break
                     case gameStates.OUT_OF_TIME:
                         message.channel.send('You wait too long until the Wumpus wakes up and discovers you in a defenseless position')
                         break
                     case gameStates.NO_ARROWS:
-                        message.channel.send('Hopelessness arise as you shoot your last arrow and miss. Suddenly, you become unmotivated and leave the cave with dishonor to your kingdom')
+                        message.channel.send('Hopelessness arise as you shoot your last arrow and miss. Suddenly, a particular beast arrives behind you...')
                         break
                     default:
                         console.log('How the heck did someone get here...')
