@@ -1,5 +1,4 @@
 const Discord = require('discord.js')
-const fs = require('fs')
 const { primary } = require('../config.json')
 const ScrabbleEvaluator = require('../models/scrabble/ScrabbleEvaluator')
 
@@ -14,6 +13,7 @@ const gameStates = {
 module.exports = {
     name: 'scrabble',
     description: 'Scrabble',
+    aliases: ['s'],
     async execute(client, message, args) {
         if (args[0] === 'help' || args[0] === 'rules' || args[0] === 'instructions') {
             const rulesEmbed = new Discord.RichEmbed()
@@ -22,7 +22,7 @@ module.exports = {
                 .addField('**Coming soon**', 'Most likely by next week.')
                 .addField('**Objective:**', '-Compete with other members to achieve the highest score for your words after 10 rounds.')
                 .addField('**Details:**', '-There can only be a max of 30 players \n -There is a time limit of 20 seconds between each round. \n Words must be longer than 2 letters in order to be played.')
-                .addField('**Scoring:**', '-Words values are calculated by Scrabble value of each letter multiplied by the length of the word. \n -First person that inputs a word first gets a bonus of 10 points. \n -First person that inputs the longest word (not value) also gets a bonus of 10 points. \n -Current standings can be found using the .standing(s) command during each round. \n There will be a total of 10 letters displayed each round where there is a 40%/60% chance for a vowel or consonant.')
+                .addField('**Scoring:**', '-Words values are calculated by Scrabble value of each letter multiplied by the length of the word. \n -Applies when there 1 < players \n--First person that inputs a word first gets a bonus of 10 points. \n--First person that inputs the longest word (not value) also gets a bonus of 10 points. \n There will be a total of 10 letters displayed each round where the letters are scrambled based on the letter distribution on Scrabble.')
                 .addField('**Other**','-Essentially, the word will be compared to a word list containing at least 100,000 English words.')
                 .attachFiles(['./assets/scrabble/pictures/s.jpg'])
                 .setThumbnail('attachment://s.jpg')
@@ -32,14 +32,13 @@ module.exports = {
         class Scrabble {
             constructor() {
                this.players = {}
-               this.maxRounds = 3
+               this.maxRounds = 5
                this.maxPlayers = 30
                this.round = 0 
                this.evaluator = new ScrabbleEvaluator
                this.status = gameStates.PLAYING
                this.winners = null
                this.maxScore = 0
-               // carry 98 from prev round
             }
 
             start() {
@@ -66,7 +65,7 @@ module.exports = {
             }
 
             getStatus(len) {
-                if (len === 0) {
+                if (!len) {
                     this.status = gameStates.NO_USERS
                 }
                 else if (this.round === this.maxRounds) {
@@ -138,7 +137,7 @@ module.exports = {
                 let isLongestFound = false
                 ids.forEach((id, index) => {
                     let { content, username, validWord, score, wordLength } = userWords[id]
-                    if (validWord) {
+                    if (validWord && Object.keys(this.players).length > 1) {
                         if (index === 0) score += 10
                         if (!isLongestFound) {
                             if (wordLength === greatestWordLength) {
@@ -148,21 +147,12 @@ module.exports = {
                         }
                     }
 
-                    if (!Object.keys(this.players).includes(id)) { 
-                        this.players[id] = {
-                            score: score,
-                            username: username,
-                            content: content,
-                            gain: score,
-                        }
-                    }
-                    else {
-                        this.players[id] = {
-                            username: username,
-                            score: this.players[id].score += score,
-                            content: content,
-                            gain: score,
-                        }
+                    const isAlreadyPlaying = Object.keys(this.players).includes(id)
+                    this.players[id] = {
+                        score: isAlreadyPlaying ? this.players[id].score + score : score,
+                        username: username,
+                        content: content,
+                        gain: score,
                     }
                 })
             }
@@ -193,10 +183,11 @@ module.exports = {
             if (status === gameStates.PLAYING) {
                 continue
             }
+
             else {
                 switch(status) {
                     case gameStates.FINISHED:
-                        message.channel.send(`🎉 | ${scrabble.winners.join(', ')} won with the score of **${scrabble.maxScore}**!`)
+                        message.channel.send(`🎉 | ${scrabble.winners.join(', ')} achieved the score of **${scrabble.maxScore}**!`)
                         break
                     case gameStates.NO_USERS:
                         message.channel.send('The game will now end due to inactivity.')

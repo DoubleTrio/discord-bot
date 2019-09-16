@@ -34,17 +34,12 @@ module.exports = class ScrabbleEvaluator {
     }
 
     isValidWord(word) {
-        const availableWord = words.includes(word)
         const letterDistribution = this.letters.reduce((unique, letter) => {
-            return Object.keys(unique).includes(letter)
-                ? {
-                    ...unique,
-                    [letter]: unique[letter] += 1
-                } 
-                : {
-                    ...unique,
-                    [letter]: 1,
-                }
+            const isDuplicateLetter = Object.keys(unique).includes(letter)
+            return {
+                ...unique,
+                [letter]: isDuplicateLetter ? unique[letter] += 1 : 1
+            }
         }, {})
 
         for (let letter of word) {
@@ -54,10 +49,14 @@ module.exports = class ScrabbleEvaluator {
 
             else {
                 letterDistribution[letter] = -1
+                break
             }
         }
         console.log(letterDistribution)
-        return Object.values(letterDistribution).every(letterVal => letterVal >= 0) && availableWord
+        const isAvailableWord = words.includes(word)
+        const areValidLetters = Object.values(letterDistribution).every(letterVal => letterVal >= 0)
+        const isValidWord = areValidLetters && isAvailableWord
+        return isValidWord
     }
 
     calculateScore(word) {
