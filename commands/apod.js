@@ -17,7 +17,7 @@ module.exports = {
     async execute(client, message) {
         const { copyright, date, explanation, hdurl, title, url } = await fetchApodImage()
         const spaceEmbed = new Discord.RichEmbed()
-            .setAuthor(`${typeof copyright === 'string' ? copyright : ' '}${date}`)
+            .setAuthor(`${typeof copyright === 'string' ? copyright + ' ': ''}${date}`)
             .addField(title, `${explanation.slice(0, 1024)}`)
             .setImage(url)
             .setFooter(`In honor for my hero, Carl Sagan - Macaroon 🌕`)
