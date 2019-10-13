@@ -106,7 +106,7 @@ department
 activities
 drowsy dreamland
 acorn acres
-brrrgh
+the brrrgh
 mezzo melodyland
 daffodil gardens
 yott
@@ -132,3 +132,39 @@ armadillo
 kiwi
 outback
 barnyard
+sellbot
+boardbot
+cashbot
+lawbot
+bossbot
+skelecog
+crane
+side crane
+coin mint
+dollar mint
+bullion mint
+jellybeans
+clerk
+stun
+lawyers
+cannon
+scale
+chief justice
+office
+gavels
+snacks
+waiters
+banquet
+vice president
+zap bad
+toontask
+nameplate
+background
+franz
+bessie
+cindy
+soggy bottom
+sticky lou
+pierce
+julius wheezer
+executive cogs

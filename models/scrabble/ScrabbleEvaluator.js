@@ -52,7 +52,6 @@ module.exports = class ScrabbleEvaluator {
                 break
             }
         }
-        console.log(letterDistribution)
         const isAvailableWord = words.includes(word)
         const areValidLetters = Object.values(letterDistribution).every(letterVal => letterVal >= 0)
         const isValidWord = areValidLetters && isAvailableWord

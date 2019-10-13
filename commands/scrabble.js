@@ -32,13 +32,14 @@ module.exports = {
         class Scrabble {
             constructor() {
                this.players = {}
-               this.maxRounds = 5
+               this.maxRounds = 8
                this.maxPlayers = 30
                this.round = 0 
                this.evaluator = new ScrabbleEvaluator
                this.status = gameStates.PLAYING
                this.winners = null
                this.maxScore = 0
+               this.isLongestFound = false
             }
 
             start() {
@@ -55,7 +56,6 @@ module.exports = {
                 this.getStatus(len)
                 if (this.status !== gameStates.NO_USERS) this.getStandings(len)
                 if (this.status === gameStates.FINISHED) this.getWinners()
-                console.log(this.players)
             }
 
             getWinners() {
@@ -93,10 +93,20 @@ module.exports = {
             }
 
             async awaitWords() {
-                const filter = m => m.content.length >= 1 && m.content.length <= 10 && m.content.match(/^[A-Z]/i)
-                const allMessages = await message.channel.awaitMessages(filter, {
-                    time: 15000,
-                })
+                let filter = m => m.content.length >= 1 && m.content.length <= 10 && m.content.match(/^[a-z]+$/)
+                let options = {
+                    time: 20000,
+                }
+
+                if (args[0] === 'single' || args[0] === 'solo') {
+                    options = {
+                        ...options,
+                        max: 1,
+                    } 
+                    filter = m => m.content.length >= 1 && m.content.length <= 10 && m.content.match(/^[a-z]+$/) && m.author.id === message.author.id
+                }
+
+                const allMessages = await message.channel.awaitMessages(filter, options)
 
                 const transformedMessages = allMessages.map(m => {
                     const lowerCaseWord = m.content.toLowerCase()
@@ -131,18 +141,19 @@ module.exports = {
             }
 
             updateStandings(userWords) {
-                const ids = Object.keys(userWords)
+                const ids = Object.keys(userWords).reverse()
                 const wordLengthArray = Object.values(userWords).filter(obj => obj.validWord === true).map(obj => obj.wordLength)
                 const greatestWordLength = Math.max(...wordLengthArray)
-                let isLongestFound = false
+                this.isLongestFound = false
                 ids.forEach((id, index) => {
                     let { content, username, validWord, score, wordLength } = userWords[id]
+                    console.log(this.isLongestFound, greatestWordLength, wordLength)
                     if (validWord && Object.keys(this.players).length > 1) {
                         if (index === 0) score += 10
-                        if (!isLongestFound) {
+                        if (!this.isLongestFound) {
                             if (wordLength === greatestWordLength) {
                                 score += 10
-                                isLongestFound = true
+                                this.isLongestFound = true
                             }
                         }
                     }
@@ -187,7 +198,7 @@ module.exports = {
             else {
                 switch(status) {
                     case gameStates.FINISHED:
-                        message.channel.send(`🎉 | ${scrabble.winners.join(', ')} achieved the score of **${scrabble.maxScore}**!`)
+                        message.channel.send(`🎉 | ${scrabble.winners.join(', ')} achieved a score of **${scrabble.maxScore}**!`)
                         break
                     case gameStates.NO_USERS:
                         message.channel.send('The game will now end due to inactivity.')

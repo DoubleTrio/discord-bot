@@ -51,12 +51,19 @@ module.exports = {
 
                 // Allow the players to guess the word as well as letter guesses
                 // If any players enter a repeated letter, their input will be ignored to prevent the game from being abused to continue forever
-                const filter = m => this.availableLetters.includes(m.content.toLowerCase()) || m.content.toLowerCase().startsWith(this.secretWord)
-
-                // Wait 8 seconds for an input
-                const allMessages = await message.channel.awaitMessages(filter, {
+                let filter = m => this.availableLetters.includes(m.content.toLowerCase()) || m.content.toLowerCase().startsWith(this.secretWord)
+                let options = {
                     time: 8000,
-                })
+                }
+                if (args.includes('solo') || args.includes('single')) {
+                    filter = m => this.availableLetters.includes(m.content.toLowerCase()) && m.author.id === message.author.id || m.content.toLowerCase().startsWith(this.secretWord) && m.author.id === message.author.id
+                    options = {
+                        ...options,
+                        max: 1,
+                    } 
+                }
+                // Wait 8 seconds for an input
+                const allMessages = await message.channel.awaitMessages(filter, options)
                  
                 // The only important aspects are what the text message says and the id of the players
                 // id - Used to filter out the latest input of each player so that they only have one guess

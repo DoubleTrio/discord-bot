@@ -55,7 +55,6 @@ fetchTriviaQuestionAsync = async (categoryId = 0) => {
     // Possible answers depending on whether it is a multiple choice or true/false
     const possible_answers = shuffled_answers.length === 2 ? ['A', 'B'] : ['A', 'B', 'C', 'D']
 
-    // Transformation of the trivia data
     const transfromedData = {
         category: category,
         question: he.decode(question),

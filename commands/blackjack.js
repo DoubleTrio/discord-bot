@@ -3,6 +3,6 @@ module.exports = {
     description: 'blackjack',
     aliases: ['bj'],
     execute(client, message) {
-        message.channel.send('Coming soon!')
+        console.log(message.author.avatarURL)
     }
 }
